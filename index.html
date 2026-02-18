@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -8,24 +9,34 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Habit Tracker</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%236C3CE1'/><path d='M30 52l15 15 25-30' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%236C3CE1'/><path d='M30 52l15 15 25-30' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%236C3CE1'/><path d='M30 52l15 15 25-30' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     :root {
       --bg: #0f0f1a;
       --surface: #1a1a2e;
       --surface-2: #232340;
+      --surface-3: #2a2a4a;
       --accent: #6C3CE1;
       --accent-glow: rgba(108, 60, 225, 0.3);
       --green: #22c55e;
       --green-glow: rgba(34, 197, 94, 0.25);
+      --amber: #f59e0b;
       --text: #f0f0f5;
       --text-dim: #8888aa;
       --danger: #ef4444;
       --radius: 16px;
+      --radius-sm: 12px;
     }
 
     body {
@@ -44,16 +55,40 @@
       justify-content: space-between;
       align-items: center;
     }
+
     .header h1 {
       font-size: 1.6rem;
       font-weight: 700;
       background: linear-gradient(135deg, #a78bfa, #6C3CE1);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .header .date {
       font-size: 0.85rem;
       color: var(--text-dim);
+    }
+
+    .settings-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 1.3rem;
+      cursor: pointer;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+
+    .settings-btn:hover,
+    .settings-btn:active {
+      color: var(--text);
     }
 
     /* ── Stats bar ── */
@@ -63,22 +98,33 @@
       padding: 16px 20px;
       overflow-x: auto;
     }
+
     .stat-card {
       flex: 1;
-      min-width: 90px;
+      min-width: 80px;
       background: var(--surface);
       border-radius: var(--radius);
-      padding: 14px;
+      padding: 14px 10px;
       text-align: center;
-      border: 1px solid rgba(255,255,255,0.04);
+      border: 1px solid rgba(255, 255, 255, 0.04);
     }
+
     .stat-card .num {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 700;
       color: var(--accent);
     }
+
+    .stat-card .num.green {
+      color: var(--green);
+    }
+
+    .stat-card .num.amber {
+      color: var(--amber);
+    }
+
     .stat-card .label {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       color: var(--text-dim);
       margin-top: 2px;
       text-transform: uppercase;
@@ -87,12 +133,13 @@
 
     /* ── Habit list ── */
     .habits {
-      padding: 0 20px 120px;
+      padding: 0 20px 140px;
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
+    /* ── Habit card ── */
     .habit-card {
       background: var(--surface);
       border-radius: var(--radius);
@@ -100,19 +147,32 @@
       display: flex;
       align-items: center;
       gap: 14px;
-      border: 1px solid rgba(255,255,255,0.04);
-      transition: transform 0.15s, box-shadow 0.15s;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.4s, max-height 0.4s;
       position: relative;
       overflow: hidden;
     }
+
     .habit-card:active {
       transform: scale(0.98);
     }
+
     .habit-card.done {
       border-color: rgba(34, 197, 94, 0.2);
       box-shadow: 0 0 20px var(--green-glow);
     }
 
+    .habit-card.hiding {
+      opacity: 0;
+      max-height: 0;
+      padding: 0 16px;
+      margin: 0;
+      border: none;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    /* ── Checkbox ── */
     .habit-check {
       width: 36px;
       height: 36px;
@@ -126,41 +186,61 @@
       transition: all 0.25s;
       background: transparent;
     }
+
     .habit-card.done .habit-check {
       background: var(--green);
       border-color: var(--green);
       animation: pop 0.3s ease;
     }
+
     .habit-check svg {
       width: 18px;
       height: 18px;
       opacity: 0;
       transition: opacity 0.2s;
     }
-    .habit-card.done .habit-check svg { opacity: 1; }
 
-    @keyframes pop {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.25); }
-      100% { transform: scale(1); }
+    .habit-card.done .habit-check svg {
+      opacity: 1;
     }
 
-    .habit-info { flex: 1; }
+    @keyframes pop {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.25);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .habit-info {
+      flex: 1;
+      cursor: pointer;
+    }
+
     .habit-name {
       font-weight: 600;
       font-size: 1rem;
     }
+
     .habit-card.done .habit-name {
       text-decoration: line-through;
       color: var(--text-dim);
     }
+
     .habit-streak {
       font-size: 0.75rem;
       color: var(--text-dim);
       margin-top: 2px;
     }
+
     .habit-streak span {
-      color: #f59e0b;
+      color: var(--amber);
     }
 
     .habit-delete {
@@ -173,9 +253,212 @@
       opacity: 0.4;
       transition: opacity 0.2s, color 0.2s;
     }
-    .habit-delete:hover, .habit-delete:active {
+
+    .habit-delete:hover,
+    .habit-delete:active {
       opacity: 1;
       color: var(--danger);
+    }
+
+    /* ── Group card ── */
+    .group-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid rgba(108, 60, 225, 0.15);
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.4s, max-height 0.4s;
+      overflow: hidden;
+    }
+
+    .group-card.done {
+      border-color: rgba(34, 197, 94, 0.25);
+      box-shadow: 0 0 24px var(--green-glow);
+    }
+
+    .group-card.hiding {
+      opacity: 0;
+      max-height: 0;
+      padding: 0;
+      margin: 0;
+      border: none;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .group-header {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .group-header .habit-check {
+      border-color: var(--accent);
+    }
+
+    .group-card.done .group-header .habit-check {
+      background: var(--green);
+      border-color: var(--green);
+      animation: pop 0.3s ease;
+    }
+
+    .group-name {
+      font-weight: 700;
+      font-size: 1rem;
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .group-card.done .group-name {
+      text-decoration: line-through;
+      color: var(--text-dim);
+    }
+
+    .group-streak {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .group-streak span {
+      color: var(--amber);
+    }
+
+    .group-count {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      background: var(--surface-2);
+      padding: 3px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+
+    .group-children {
+      padding: 0 16px 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .child-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--surface-2);
+      border-radius: var(--radius-sm);
+      transition: opacity 0.3s, max-height 0.3s;
+    }
+
+    .child-item.done {
+      opacity: 0.5;
+    }
+
+    .child-item.hiding {
+      opacity: 0;
+      max-height: 0;
+      padding: 0 12px;
+      margin: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .child-check {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: all 0.25s;
+      background: transparent;
+    }
+
+    .child-item.done .child-check {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .child-check svg {
+      width: 14px;
+      height: 14px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .child-item.done .child-check svg {
+      opacity: 1;
+    }
+
+    .child-name {
+      font-size: 0.9rem;
+      flex: 1;
+      cursor: pointer;
+    }
+
+    .child-item.done .child-name {
+      text-decoration: line-through;
+      color: var(--text-dim);
+    }
+
+    .child-delete {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 4px;
+      opacity: 0.3;
+      transition: opacity 0.2s, color 0.2s;
+    }
+
+    .child-delete:hover,
+    .child-delete:active {
+      opacity: 1;
+      color: var(--danger);
+    }
+
+    /* ── Show completed toggle ── */
+    .show-completed-btn {
+      background: var(--surface-2);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      font-family: inherit;
+      padding: 12px 20px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-align: center;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    .show-completed-btn:hover {
+      background: var(--surface-3);
+    }
+
+    /* ── All done celebration ── */
+    .all-done {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-dim);
+    }
+
+    .all-done .icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+
+    .all-done h2 {
+      font-size: 1.3rem;
+      color: var(--green);
+      margin-bottom: 6px;
+    }
+
+    .all-done p {
+      font-size: 0.9rem;
     }
 
     /* ── Empty state ── */
@@ -184,10 +467,17 @@
       padding: 60px 20px;
       color: var(--text-dim);
     }
-    .empty .icon { font-size: 3rem; margin-bottom: 12px; }
-    .empty p { font-size: 0.95rem; }
 
-    /* ── Add button ── */
+    .empty .icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+
+    .empty p {
+      font-size: 0.95rem;
+    }
+
+    /* ── FAB ── */
     .fab {
       position: fixed;
       bottom: 28px;
@@ -207,20 +497,26 @@
       transition: transform 0.15s;
       z-index: 10;
     }
-    .fab:active { transform: scale(0.9); }
+
+    .fab:active {
+      transform: scale(0.9);
+    }
 
     /* ── Modal ── */
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(6px);
       display: none;
       align-items: flex-end;
       justify-content: center;
       z-index: 100;
     }
-    .modal-overlay.open { display: flex; }
+
+    .modal-overlay.open {
+      display: flex;
+    }
 
     .modal {
       background: var(--surface-2);
@@ -230,19 +526,28 @@
       max-width: 480px;
       animation: slideUp 0.3s ease;
     }
+
     @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
+      from {
+        transform: translateY(100%);
+      }
+
+      to {
+        transform: translateY(0);
+      }
     }
+
     .modal h2 {
       font-size: 1.2rem;
       margin-bottom: 20px;
     }
-    .modal input {
+
+    .modal input,
+    .modal select {
       width: 100%;
       padding: 14px 16px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       background: var(--bg);
       color: var(--text);
       font-size: 1rem;
@@ -250,18 +555,113 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    .modal input:focus {
+
+    .modal input:focus,
+    .modal select:focus {
       border-color: var(--accent);
     }
+
+    /* ── Type toggle ── */
+    .type-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .type-toggle button {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--bg);
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .type-toggle button.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    /* ── Group children input ── */
+    .children-input {
+      margin-top: 12px;
+      display: none;
+    }
+
+    .children-input.visible {
+      display: block;
+    }
+
+    .children-input label {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .child-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+      min-height: 28px;
+    }
+
+    .child-tag {
+      background: var(--surface-3);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .child-tag .remove {
+      cursor: pointer;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .child-tag .remove:hover {
+      color: var(--danger);
+    }
+
+    .child-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .child-input-row input {
+      flex: 1;
+    }
+
+    .child-input-row button {
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
     .modal-actions {
       display: flex;
       gap: 10px;
       margin-top: 16px;
     }
+
     .modal-actions button {
       flex: 1;
       padding: 14px;
-      border-radius: 12px;
+      border-radius: var(--radius-sm);
       border: none;
       font-size: 1rem;
       font-weight: 600;
@@ -269,14 +669,38 @@
       cursor: pointer;
       transition: opacity 0.15s;
     }
-    .modal-actions button:active { opacity: 0.8; }
+
+    .modal-actions button:active {
+      opacity: 0.8;
+    }
+
     .btn-cancel {
       background: var(--surface);
       color: var(--text-dim);
     }
+
     .btn-add {
       background: linear-gradient(135deg, #6C3CE1, #4F9DFF);
       color: white;
+    }
+
+    /* ── Settings modal ── */
+    .settings-content label {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .settings-content .hint {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+      opacity: 0.7;
+    }
+
+    .settings-content select {
+      margin-bottom: 12px;
     }
 
     /* ── Week dots ── */
@@ -285,36 +709,259 @@
       gap: 4px;
       margin-top: 6px;
     }
+
     .week-dots .dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       background: var(--surface-2);
     }
+
     .week-dots .dot.filled {
       background: var(--green);
     }
+
+    /* ── Detail Modal ── */
+    .detail-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .detail-overlay.open {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 1;
+    }
+
+    .detail-back {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    .detail-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      flex: 1;
+    }
+
+    .detail-type {
+      font-size: 0.7rem;
+      color: var(--accent);
+      background: rgba(108, 60, 225, 0.15);
+      padding: 3px 10px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-body {
+      padding: 0 20px 40px;
+    }
+
+    .detail-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .detail-stat {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .detail-stat .num {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .detail-stat .num.green {
+      color: var(--green);
+    }
+
+    .detail-stat .num.amber {
+      color: var(--amber);
+    }
+
+    .detail-stat .num.accent {
+      color: var(--accent);
+    }
+
+    .detail-stat .label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Streak Heatmap ── */
+    .heatmap-section {
+      margin-bottom: 24px;
+    }
+
+    .heatmap-section h3 {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .heatmap-months {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .heatmap-month {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .heatmap-month-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .heatmap-day-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 2px 0;
+    }
+
+    .heatmap-cell {
+      aspect-ratio: 1;
+      border-radius: 4px;
+      background: var(--surface-2);
+      position: relative;
+    }
+
+    .heatmap-cell.filled {
+      background: var(--green);
+    }
+
+    .heatmap-cell.today {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+    }
+
+    .heatmap-cell.empty {
+      background: transparent;
+    }
+
+    /* ── Children stats in detail ── */
+    .detail-children {
+      margin-top: 24px;
+    }
+
+    .detail-children h3 {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .detail-child-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .detail-child-name {
+      flex: 1;
+      font-size: 0.9rem;
+    }
+
+    .detail-child-streak {
+      font-size: 0.8rem;
+      color: var(--amber);
+      white-space: nowrap;
+    }
+
+    .detail-child-total {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
   </style>
 </head>
+
 <body>
 
   <div class="header">
     <h1>✦ Habit Tracker</h1>
-    <div class="date" id="dateDisplay"></div>
+    <div class="header-right">
+      <div class="date" id="dateDisplay"></div>
+      <button class="settings-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
+    </div>
   </div>
 
   <div class="stats" id="statsBar">
     <div class="stat-card">
-      <div class="num" id="statDone">0</div>
-      <div class="label">Done Today</div>
+      <div class="num green" id="statDone">0</div>
+      <div class="label">Done</div>
     </div>
     <div class="stat-card">
       <div class="num" id="statTotal">0</div>
       <div class="label">Total</div>
     </div>
     <div class="stat-card">
-      <div class="num" id="statBestStreak">0</div>
+      <div class="num amber" id="statBestStreak">0</div>
       <div class="label">Best Streak</div>
+    </div>
+    <div class="stat-card">
+      <div class="num green" id="statPerfectDays">0</div>
+      <div class="label">Perfect Days</div>
     </div>
   </div>
 
@@ -322,45 +969,126 @@
 
   <button class="fab" id="addBtn" aria-label="Add habit">+</button>
 
+  <!-- Add Habit/Group Modal -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
-      <h2>New Habit</h2>
+      <h2>Add New</h2>
+      <div class="type-toggle">
+        <button class="active" id="typeHabit" onclick="setAddType('habit')">Habit</button>
+        <button id="typeGroup" onclick="setAddType('group')">Group</button>
+      </div>
       <input type="text" id="habitInput" placeholder="e.g. Read 20 minutes" autocomplete="off">
+      <div class="children-input" id="childrenInput">
+        <label>Group items:</label>
+        <div class="child-tags" id="childTags"></div>
+        <div class="child-input-row">
+          <input type="text" id="childInput" placeholder="e.g. Push-ups" autocomplete="off">
+          <button onclick="addChildTag()">Add</button>
+        </div>
+      </div>
       <div class="modal-actions">
         <button class="btn-cancel" id="cancelBtn">Cancel</button>
-        <button class="btn-add" id="saveBtn">Add Habit</button>
+        <button class="btn-add" id="saveBtn">Save</button>
       </div>
     </div>
   </div>
 
-  <script>
-    // ── Data Layer (localStorage) ──
-    const STORAGE_KEY = 'habit_tracker_data';
-    const today = () => new Date().toISOString().slice(0, 10);
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h2>⚙️ Settings</h2>
+      <div class="settings-content">
+        <label for="resetHourSelect">Day resets at:</label>
+        <select id="resetHourSelect"></select>
+        <div class="hint">Choose when your day "starts over". Useful if you stay up past midnight.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="settingsCloseBtn">Close</button>
+        <button class="btn-add" id="settingsSaveBtn">Save</button>
+      </div>
+    </div>
+  </div>
 
+  <!-- Detail Modal -->
+  <div class="detail-overlay" id="detailOverlay">
+    <div class="detail-header">
+      <button class="detail-back" id="detailBack" aria-label="Back">←</button>
+      <div class="detail-title" id="detailTitle"></div>
+      <div class="detail-type" id="detailType"></div>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+
+  <script>
+    // ── Constants ──
+    const STORAGE_KEY = 'habit_tracker_data';
+    const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>';
+
+    let showCompleted = false;
+    let addType = 'habit';
+    let childNames = [];
+
+    // ── ID generation ──
+    function generateId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+
+    // ── Effective date (respects reset hour) ──
+    function getEffectiveDate(settings) {
+      const now = new Date();
+      const resetHour = (settings && settings.resetHour) || 0;
+      if (now.getHours() < resetHour) {
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return yesterday.toISOString().slice(0, 10);
+      }
+      return now.toISOString().slice(0, 10);
+    }
+
+    // ── Data Layer ──
     function load() {
       try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { habits: [] };
-      } catch { return { habits: [] }; }
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (!raw) return { settings: { resetHour: 0 }, items: [] };
+        // Migrate from old format
+        if (raw.habits && !raw.items) {
+          return {
+            settings: { resetHour: 0 },
+            items: raw.habits.map(h => ({
+              id: generateId(),
+              type: 'habit',
+              name: h.name,
+              completed: h.completed || []
+            }))
+          };
+        }
+        if (!raw.settings) raw.settings = { resetHour: 0 };
+        if (!raw.items) raw.items = [];
+        return raw;
+      } catch { return { settings: { resetHour: 0 }, items: [] }; }
     }
 
     function save(data) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
 
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
     // ── Streak Calculation ──
-    function calcStreak(completedDates) {
+    function calcStreak(completedDates, settings) {
       if (!completedDates || completedDates.length === 0) return 0;
       const sorted = [...completedDates].sort().reverse();
-      const todayStr = today();
+      const todayStr = getEffectiveDate(settings);
       let streak = 0;
-      let checkDate = new Date(todayStr);
+      let checkDate = new Date(todayStr + 'T12:00:00');
 
-      // If not done today, start from yesterday
       if (sorted[0] !== todayStr) {
         checkDate.setDate(checkDate.getDate() - 1);
       }
-
       for (let i = 0; i < 365; i++) {
         const dateStr = checkDate.toISOString().slice(0, 10);
         if (sorted.includes(dateStr)) {
@@ -373,14 +1101,89 @@
       return streak;
     }
 
-    // Last 7 days completion
-    function last7Days(completedDates) {
+    // ── Group streak: consecutive days all children completed ──
+    function calcGroupStreak(item, settings) {
+      const todayStr = getEffectiveDate(settings);
+      let streak = 0;
+      let checkDate = new Date(todayStr + 'T12:00:00');
+
+      // Check if group is done today
+      if (!isGroupDoneOnDate(item, todayStr)) {
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+      for (let i = 0; i < 365; i++) {
+        const dateStr = checkDate.toISOString().slice(0, 10);
+        if (isGroupDoneOnDate(item, dateStr)) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+      return streak;
+    }
+
+    function isGroupDoneOnDate(item, dateStr) {
+      if (!item.children || item.children.length === 0) return false;
+      // Group is done if master was checked OR all children were checked
+      if (item.completed && item.completed.includes(dateStr)) return true;
+      return item.children.every(c => c.completed && c.completed.includes(dateStr));
+    }
+
+    // ── Perfect day streak: all items done ──
+    function calcPerfectDayStreak(data) {
+      const settings = data.settings;
+      const todayStr = getEffectiveDate(settings);
+      if (data.items.length === 0) return 0;
+
+      let streak = 0;
+      let checkDate = new Date(todayStr + 'T12:00:00');
+
+      if (!isAllDoneOnDate(data.items, todayStr)) {
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+      for (let i = 0; i < 365; i++) {
+        const dateStr = checkDate.toISOString().slice(0, 10);
+        if (isAllDoneOnDate(data.items, dateStr)) {
+          streak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+      return streak;
+    }
+
+    function isAllDoneOnDate(items, dateStr) {
+      return items.every(item => {
+        if (item.type === 'group') return isGroupDoneOnDate(item, dateStr);
+        return item.completed && item.completed.includes(dateStr);
+      });
+    }
+
+    // ── Last 7 days ──
+    function last7Days(completedDates, settings) {
       const result = [];
+      const todayStr = getEffectiveDate(settings);
+      const base = new Date(todayStr + 'T12:00:00');
       for (let i = 6; i >= 0; i--) {
-        const d = new Date();
+        const d = new Date(base);
         d.setDate(d.getDate() - i);
         const ds = d.toISOString().slice(0, 10);
         result.push(completedDates && completedDates.includes(ds));
+      }
+      return result;
+    }
+
+    function last7DaysGroup(item, settings) {
+      const result = [];
+      const todayStr = getEffectiveDate(settings);
+      const base = new Date(todayStr + 'T12:00:00');
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(base);
+        d.setDate(d.getDate() - i);
+        const ds = d.toISOString().slice(0, 10);
+        result.push(isGroupDoneOnDate(item, ds));
       }
       return result;
     }
@@ -389,127 +1192,571 @@
     function render() {
       const data = load();
       const list = document.getElementById('habitList');
-      const todayStr = today();
+      const todayStr = getEffectiveDate(data.settings);
 
       // Date display
       document.getElementById('dateDisplay').textContent =
         new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
-      if (data.habits.length === 0) {
+      if (data.items.length === 0) {
         list.innerHTML = `
           <div class="empty">
             <div class="icon">🎯</div>
             <p>No habits yet.<br>Tap <strong>+</strong> to add your first one!</p>
           </div>`;
-        document.getElementById('statDone').textContent = 0;
-        document.getElementById('statTotal').textContent = 0;
-        document.getElementById('statBestStreak').textContent = 0;
+        updateStats(0, 0, 0, 0);
         return;
       }
 
       let doneCount = 0;
+      let totalCount = 0;
       let bestStreak = 0;
+      let html = '';
 
-      list.innerHTML = data.habits.map((h, i) => {
-        const isDone = h.completed && h.completed.includes(todayStr);
-        if (isDone) doneCount++;
-        const streak = calcStreak(h.completed);
-        if (streak > bestStreak) bestStreak = streak;
-        const week = last7Days(h.completed);
+      data.items.forEach((item, idx) => {
+        if (item.type === 'group') {
+          const groupDone = isGroupDoneOnDate(item, todayStr);
+          const childrenDoneCount = item.children.filter(c => c.completed && c.completed.includes(todayStr)).length;
+          const allChildrenDone = item.children.length > 0 && childrenDoneCount === item.children.length;
+          const effectivelyDone = groupDone || allChildrenDone;
+          const streak = calcGroupStreak(item, data.settings);
+          if (streak > bestStreak) bestStreak = streak;
+          const week = last7DaysGroup(item, data.settings);
 
-        return `
-          <div class="habit-card ${isDone ? 'done' : ''}" data-index="${i}">
-            <div class="habit-check" onclick="toggleHabit(${i})">
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="4 12 10 18 20 6"/>
-              </svg>
-            </div>
-            <div class="habit-info" onclick="toggleHabit(${i})">
-              <div class="habit-name">${escapeHtml(h.name)}</div>
-              <div class="habit-streak">🔥 <span>${streak} day${streak !== 1 ? 's' : ''}</span> streak</div>
-              <div class="week-dots">
-                ${week.map(d => `<div class="dot ${d ? 'filled' : ''}"></div>`).join('')}
+          totalCount++;
+          if (effectivelyDone) doneCount++;
+
+          const isHiding = effectivelyDone && !showCompleted;
+
+          html += `<div class="group-card ${effectivelyDone ? 'done' : ''} ${isHiding ? 'hiding' : ''}" data-id="${item.id}">
+            <div class="group-header">
+              <div class="habit-check" onclick="toggleGroup('${item.id}')">${CHECK_SVG}</div>
+              <div style="flex:1" onclick="showDetail('${item.id}')">
+                <div class="group-name">${escapeHtml(item.name)}</div>
+                <div class="group-streak">🔥 <span>${streak} day${streak !== 1 ? 's' : ''}</span> streak</div>
+                <div class="week-dots">${week.map(d => `<div class="dot ${d ? 'filled' : ''}"></div>`).join('')}</div>
               </div>
+              <div class="group-count">${childrenDoneCount}/${item.children.length}</div>
+              <button class="habit-delete" onclick="deleteItem('${item.id}')" aria-label="Delete">✕</button>
             </div>
-            <button class="habit-delete" onclick="deleteHabit(${i})" aria-label="Delete">✕</button>
+            <div class="group-children">
+              ${item.children.map((child, ci) => {
+            const childDone = child.completed && child.completed.includes(todayStr);
+            const childHiding = childDone && !showCompleted;
+            return `<div class="child-item ${childDone ? 'done' : ''} ${childHiding ? 'hiding' : ''}">
+                  <div class="child-check" onclick="toggleChild('${item.id}','${child.id}')">${CHECK_SVG}</div>
+                  <div class="child-name" onclick="showChildDetail('${item.id}','${child.id}')">${escapeHtml(child.name)}</div>
+                  <button class="child-delete" onclick="deleteChild('${item.id}','${child.id}')" aria-label="Delete">✕</button>
+                </div>`;
+          }).join('')}
+            </div>
           </div>`;
-      }).join('');
+        } else {
+          // Standalone habit
+          const isDone = item.completed && item.completed.includes(todayStr);
+          const streak = calcStreak(item.completed, data.settings);
+          if (streak > bestStreak) bestStreak = streak;
+          const week = last7Days(item.completed, data.settings);
 
-      document.getElementById('statDone').textContent = doneCount;
-      document.getElementById('statTotal').textContent = data.habits.length;
-      document.getElementById('statBestStreak').textContent = bestStreak;
+          totalCount++;
+          if (isDone) doneCount++;
+
+          const isHiding = isDone && !showCompleted;
+
+          html += `<div class="habit-card ${isDone ? 'done' : ''} ${isHiding ? 'hiding' : ''}" data-id="${item.id}">
+            <div class="habit-check" onclick="toggleHabit('${item.id}')">${CHECK_SVG}</div>
+            <div class="habit-info" onclick="showDetail('${item.id}')">
+              <div class="habit-name">${escapeHtml(item.name)}</div>
+              <div class="habit-streak">🔥 <span>${streak} day${streak !== 1 ? 's' : ''}</span> streak</div>
+              <div class="week-dots">${week.map(d => `<div class="dot ${d ? 'filled' : ''}"></div>`).join('')}</div>
+            </div>
+            <button class="habit-delete" onclick="deleteItem('${item.id}')" aria-label="Delete">✕</button>
+          </div>`;
+        }
+      });
+
+      // All done celebration
+      if (doneCount === totalCount && totalCount > 0 && !showCompleted) {
+        html += `<div class="all-done">
+          <div class="icon">🎉</div>
+          <h2>All done for today!</h2>
+          <p>You've completed all ${totalCount} habit${totalCount !== 1 ? 's' : ''}. Amazing!</p>
+        </div>`;
+      }
+
+      // Show/hide completed toggle
+      if (doneCount > 0) {
+        html += `<button class="show-completed-btn" onclick="toggleShowCompleted()">
+          ${showCompleted ? 'Hide completed' : `Show completed (${doneCount})`}
+        </button>`;
+      }
+
+      list.innerHTML = html;
+
+      const perfectDays = calcPerfectDayStreak(data);
+      updateStats(doneCount, totalCount, bestStreak, perfectDays);
     }
 
-    function escapeHtml(str) {
-      const d = document.createElement('div');
-      d.textContent = str;
-      return d.innerHTML;
+    function updateStats(done, total, bestStreak, perfectDays) {
+      document.getElementById('statDone').textContent = done;
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statBestStreak').textContent = bestStreak;
+      document.getElementById('statPerfectDays').textContent = perfectDays;
     }
 
     // ── Actions ──
-    function toggleHabit(index) {
+    function toggleHabit(id) {
       const data = load();
-      const habit = data.habits[index];
-      if (!habit.completed) habit.completed = [];
-      const todayStr = today();
-      const idx = habit.completed.indexOf(todayStr);
+      const item = data.items.find(i => i.id === id);
+      if (!item) return;
+      if (!item.completed) item.completed = [];
+      const todayStr = getEffectiveDate(data.settings);
+      const idx = item.completed.indexOf(todayStr);
       if (idx > -1) {
-        habit.completed.splice(idx, 1);
+        item.completed.splice(idx, 1);
       } else {
-        habit.completed.push(todayStr);
+        item.completed.push(todayStr);
       }
       save(data);
       render();
     }
 
-    function deleteHabit(index) {
-      if (!confirm('Delete this habit?')) return;
+    function toggleGroup(id) {
       const data = load();
-      data.habits.splice(index, 1);
+      const item = data.items.find(i => i.id === id);
+      if (!item || item.type !== 'group') return;
+      const todayStr = getEffectiveDate(data.settings);
+      const effectivelyDone = isGroupDoneOnDate(item, todayStr);
+
+      if (effectivelyDone) {
+        // Uncomplete: remove today from group and all children
+        if (item.completed) {
+          const gi = item.completed.indexOf(todayStr);
+          if (gi > -1) item.completed.splice(gi, 1);
+        }
+        item.children.forEach(c => {
+          if (c.completed) {
+            const ci = c.completed.indexOf(todayStr);
+            if (ci > -1) c.completed.splice(ci, 1);
+          }
+        });
+      } else {
+        // Complete: add today to group and all children
+        if (!item.completed) item.completed = [];
+        if (!item.completed.includes(todayStr)) item.completed.push(todayStr);
+        item.children.forEach(c => {
+          if (!c.completed) c.completed = [];
+          if (!c.completed.includes(todayStr)) c.completed.push(todayStr);
+        });
+      }
       save(data);
       render();
     }
 
-    function addHabit(name) {
+    function toggleChild(groupId, childId) {
       const data = load();
-      data.habits.push({ name: name.trim(), completed: [] });
+      const item = data.items.find(i => i.id === groupId);
+      if (!item || item.type !== 'group') return;
+      const child = item.children.find(c => c.id === childId);
+      if (!child) return;
+      if (!child.completed) child.completed = [];
+      const todayStr = getEffectiveDate(data.settings);
+      const idx = child.completed.indexOf(todayStr);
+      if (idx > -1) {
+        child.completed.splice(idx, 1);
+        // Also remove group completion if it was set
+        if (item.completed) {
+          const gi = item.completed.indexOf(todayStr);
+          if (gi > -1) item.completed.splice(gi, 1);
+        }
+      } else {
+        child.completed.push(todayStr);
+        // Auto-complete group if all children done
+        const allDone = item.children.every(c => c.completed && c.completed.includes(todayStr));
+        if (allDone) {
+          if (!item.completed) item.completed = [];
+          if (!item.completed.includes(todayStr)) item.completed.push(todayStr);
+        }
+      }
       save(data);
       render();
     }
 
-    // ── Modal ──
+    function deleteItem(id) {
+      if (!confirm('Delete this item and all its data?')) return;
+      const data = load();
+      data.items = data.items.filter(i => i.id !== id);
+      save(data);
+      render();
+    }
+
+    function deleteChild(groupId, childId) {
+      if (!confirm('Remove this item from the group?')) return;
+      const data = load();
+      const item = data.items.find(i => i.id === groupId);
+      if (!item) return;
+      item.children = item.children.filter(c => c.id !== childId);
+      save(data);
+      render();
+    }
+
+    function toggleShowCompleted() {
+      showCompleted = !showCompleted;
+      render();
+    }
+
+    // ── Add modal ──
     const modal = document.getElementById('modal');
     const input = document.getElementById('habitInput');
 
+    function setAddType(type) {
+      addType = type;
+      document.getElementById('typeHabit').classList.toggle('active', type === 'habit');
+      document.getElementById('typeGroup').classList.toggle('active', type === 'group');
+      document.getElementById('childrenInput').classList.toggle('visible', type === 'group');
+      input.placeholder = type === 'habit' ? 'e.g. Read 20 minutes' : 'Group name, e.g. Morning Routine';
+    }
+
+    function addChildTag() {
+      const ci = document.getElementById('childInput');
+      const name = ci.value.trim();
+      if (name) {
+        childNames.push(name);
+        ci.value = '';
+        renderChildTags();
+        ci.focus();
+      }
+    }
+
+    function removeChildTag(idx) {
+      childNames.splice(idx, 1);
+      renderChildTags();
+    }
+
+    function renderChildTags() {
+      document.getElementById('childTags').innerHTML = childNames.map((n, i) =>
+        `<div class="child-tag">${escapeHtml(n)}<span class="remove" onclick="removeChildTag(${i})">✕</span></div>`
+      ).join('');
+    }
+
     document.getElementById('addBtn').onclick = () => {
       modal.classList.add('open');
+      addType = 'habit';
+      setAddType('habit');
+      childNames = [];
+      renderChildTags();
+      input.value = '';
       setTimeout(() => input.focus(), 300);
     };
 
     document.getElementById('cancelBtn').onclick = () => {
       modal.classList.remove('open');
       input.value = '';
+      childNames = [];
+      renderChildTags();
     };
 
     document.getElementById('saveBtn').onclick = () => {
       const name = input.value.trim();
-      if (name) {
-        addHabit(name);
-        input.value = '';
-        modal.classList.remove('open');
+      if (!name) return;
+
+      const data = load();
+      if (addType === 'habit') {
+        data.items.push({ id: generateId(), type: 'habit', name, completed: [] });
+      } else {
+        if (childNames.length === 0) {
+          alert('Please add at least one item to the group.');
+          return;
+        }
+        data.items.push({
+          id: generateId(),
+          type: 'group',
+          name,
+          completed: [],
+          children: childNames.map(n => ({ id: generateId(), name: n, completed: [] }))
+        });
       }
+      save(data);
+      input.value = '';
+      childNames = [];
+      renderChildTags();
+      modal.classList.remove('open');
+      render();
     };
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('saveBtn').click();
+    });
+    document.getElementById('childInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); addChildTag(); }
     });
 
     modal.addEventListener('click', e => {
       if (e.target === modal) {
         modal.classList.remove('open');
         input.value = '';
+        childNames = [];
+        renderChildTags();
       }
     });
+
+    // ── Settings modal ──
+    const settingsModal = document.getElementById('settingsModal');
+    const resetHourSelect = document.getElementById('resetHourSelect');
+
+    // Populate hours
+    for (let h = 0; h < 24; h++) {
+      const opt = document.createElement('option');
+      opt.value = h;
+      const ampm = h === 0 ? '12:00 AM (midnight)' : h < 12 ? `${h}:00 AM` : h === 12 ? '12:00 PM (noon)' : `${h - 12}:00 PM`;
+      opt.textContent = ampm;
+      resetHourSelect.appendChild(opt);
+    }
+
+    document.getElementById('settingsBtn').onclick = () => {
+      const data = load();
+      resetHourSelect.value = data.settings.resetHour || 0;
+      settingsModal.classList.add('open');
+    };
+
+    document.getElementById('settingsCloseBtn').onclick = () => {
+      settingsModal.classList.remove('open');
+    };
+
+    document.getElementById('settingsSaveBtn').onclick = () => {
+      const data = load();
+      data.settings.resetHour = parseInt(resetHourSelect.value, 10);
+      save(data);
+      settingsModal.classList.remove('open');
+      render();
+    };
+
+    settingsModal.addEventListener('click', e => {
+      if (e.target === settingsModal) settingsModal.classList.remove('open');
+    });
+
+    // ── Detail View ──
+    const detailOverlay = document.getElementById('detailOverlay');
+
+    document.getElementById('detailBack').onclick = () => {
+      detailOverlay.classList.remove('open');
+    };
+
+    function getCompletedDatesForItem(item, settings) {
+      if (item.type === 'group') {
+        // Collect all dates where group was fully done
+        const allDates = new Set();
+        // Gather all possible dates from children + group completed
+        const candidates = new Set();
+        if (item.completed) item.completed.forEach(d => candidates.add(d));
+        item.children.forEach(c => {
+          if (c.completed) c.completed.forEach(d => candidates.add(d));
+        });
+        candidates.forEach(d => {
+          if (isGroupDoneOnDate(item, d)) allDates.add(d);
+        });
+        return [...allDates].sort();
+      }
+      return (item.completed || []).slice().sort();
+    }
+
+    function calcBestStreak(completedDates) {
+      if (!completedDates || completedDates.length === 0) return 0;
+      const sorted = [...completedDates].sort();
+      let best = 1;
+      let current = 1;
+      for (let i = 1; i < sorted.length; i++) {
+        const prev = new Date(sorted[i - 1] + 'T12:00:00');
+        const curr = new Date(sorted[i] + 'T12:00:00');
+        const diff = (curr - prev) / (1000 * 60 * 60 * 24);
+        if (diff === 1) {
+          current++;
+          if (current > best) best = current;
+        } else if (diff > 1) {
+          current = 1;
+        }
+        // diff === 0 means duplicate, ignore
+      }
+      return best;
+    }
+
+    function calcCompletionRate(completedDates, settings) {
+      if (!completedDates || completedDates.length === 0) return 0;
+      const sorted = [...completedDates].sort();
+      const first = new Date(sorted[0] + 'T12:00:00');
+      const todayStr = getEffectiveDate(settings);
+      const today = new Date(todayStr + 'T12:00:00');
+      const totalDays = Math.max(1, Math.round((today - first) / (1000 * 60 * 60 * 24)) + 1);
+      return Math.round((completedDates.length / totalDays) * 100);
+    }
+
+    function buildHeatmapHtml(completedDates, settings) {
+      const todayStr = getEffectiveDate(settings);
+      const today = new Date(todayStr + 'T12:00:00');
+      const datesSet = new Set(completedDates);
+      const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+      let html = '';
+
+      // Show last 3 months
+      for (let m = 0; m <= 2; m++) {
+        const monthDate = new Date(today);
+        monthDate.setMonth(monthDate.getMonth() - m);
+        const year = monthDate.getFullYear();
+        const month = monthDate.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const monthName = firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+        // Day of week for first day (0=Sun, convert to Mon-start: Mon=0)
+        let startDow = firstDay.getDay() - 1;
+        if (startDow < 0) startDow = 6;
+
+        let grid = '';
+        // Day labels
+        grid += dayLabels.map(d => `<div class="heatmap-day-label">${d}</div>`).join('');
+
+        // Empty cells before first day
+        for (let e = 0; e < startDow; e++) {
+          grid += '<div class="heatmap-cell empty"></div>';
+        }
+
+        // Days of month
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const isFuture = dateStr > todayStr;
+          const isToday = dateStr === todayStr;
+          const isFilled = datesSet.has(dateStr);
+          if (isFuture) {
+            grid += '<div class="heatmap-cell empty"></div>';
+          } else {
+            grid += `<div class="heatmap-cell ${isFilled ? 'filled' : ''} ${isToday ? 'today' : ''}"></div>`;
+          }
+        }
+
+        html += `<div class="heatmap-month">
+          <div class="heatmap-month-label">${monthName}</div>
+          <div class="heatmap-grid">${grid}</div>
+        </div>`;
+      }
+
+      return html;
+    }
+
+    function showDetail(id) {
+      const data = load();
+      const item = data.items.find(i => i.id === id);
+      if (!item) return;
+
+      const settings = data.settings;
+      const completedDates = getCompletedDatesForItem(item, settings);
+      const currentStreak = item.type === 'group'
+        ? calcGroupStreak(item, settings)
+        : calcStreak(item.completed, settings);
+      const bestStreak = calcBestStreak(completedDates);
+      const totalDays = completedDates.length;
+      const rate = calcCompletionRate(completedDates, settings);
+
+      document.getElementById('detailTitle').textContent = item.name;
+      document.getElementById('detailType').textContent = item.type === 'group' ? 'Group' : 'Habit';
+
+      let bodyHtml = '';
+
+      // Stats grid
+      bodyHtml += `<div class="detail-stats">
+        <div class="detail-stat">
+          <div class="num amber">${currentStreak}</div>
+          <div class="label">Current Streak</div>
+        </div>
+        <div class="detail-stat">
+          <div class="num green">${bestStreak}</div>
+          <div class="label">Best Streak</div>
+        </div>
+        <div class="detail-stat">
+          <div class="num accent">${totalDays}</div>
+          <div class="label">Total Days</div>
+        </div>
+        <div class="detail-stat">
+          <div class="num">${rate}%</div>
+          <div class="label">Completion Rate</div>
+        </div>
+      </div>`;
+
+      // Heatmap
+      bodyHtml += `<div class="heatmap-section">
+        <h3>Streak Map</h3>
+        <div class="heatmap-months">${buildHeatmapHtml(completedDates, settings)}</div>
+      </div>`;
+
+      // Group children breakdown
+      if (item.type === 'group' && item.children.length > 0) {
+        bodyHtml += `<div class="detail-children"><h3>Items</h3>`;
+        item.children.forEach(child => {
+          const cStreak = calcStreak(child.completed, settings);
+          const cBest = calcBestStreak(child.completed || []);
+          const cTotal = (child.completed || []).length;
+          bodyHtml += `<div class="detail-child-row">
+            <div class="detail-child-name">${escapeHtml(child.name)}</div>
+            <div class="detail-child-streak">🔥 ${cStreak}d</div>
+            <div class="detail-child-total">Best: ${cBest} · Total: ${cTotal}d</div>
+          </div>`;
+        });
+        bodyHtml += '</div>';
+      }
+
+      document.getElementById('detailBody').innerHTML = bodyHtml;
+      detailOverlay.scrollTop = 0;
+      detailOverlay.classList.add('open');
+    }
+
+    function showChildDetail(groupId, childId) {
+      const data = load();
+      const group = data.items.find(i => i.id === groupId);
+      if (!group || group.type !== 'group') return;
+      const child = group.children.find(c => c.id === childId);
+      if (!child) return;
+
+      const settings = data.settings;
+      const completedDates = (child.completed || []).slice().sort();
+      const currentStreak = calcStreak(child.completed, settings);
+      const bestStreak = calcBestStreak(completedDates);
+      const totalDays = completedDates.length;
+      const rate = calcCompletionRate(completedDates, settings);
+
+      document.getElementById('detailTitle').textContent = child.name;
+      document.getElementById('detailType').textContent = 'Group Item';
+
+      let bodyHtml = '';
+
+      bodyHtml += `<div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:16px;">Part of <strong>${escapeHtml(group.name)}</strong></div>`;
+
+      bodyHtml += `<div class="detail-stats">
+        <div class="detail-stat">
+          <div class="num amber">${currentStreak}</div>
+          <div class="label">Current Streak</div>
+        </div>
+        <div class="detail-stat">
+          <div class="num green">${bestStreak}</div>
+          <div class="label">Best Streak</div>
+        </div>
+        <div class="detail-stat">
+          <div class="num accent">${totalDays}</div>
+          <div class="label">Total Days</div>
+        </div>
+        <div class="detail-stat">
+          <div class="num">${rate}%</div>
+          <div class="label">Completion Rate</div>
+        </div>
+      </div>`;
+
+      bodyHtml += `<div class="heatmap-section">
+        <h3>Streak Map</h3>
+        <div class="heatmap-months">${buildHeatmapHtml(completedDates, settings)}</div>
+      </div>`;
+
+      document.getElementById('detailBody').innerHTML = bodyHtml;
+      detailOverlay.scrollTop = 0;
+      detailOverlay.classList.add('open');
+    }
 
     // ── Service Worker Registration ──
     if ('serviceWorker' in navigator) {
@@ -522,4 +1769,5 @@
     render();
   </script>
 </body>
+
 </html>
