@@ -76,7 +76,8 @@
       color: var(--text-dim);
     }
 
-    .settings-btn {
+    .settings-btn,
+    .reorder-btn {
       background: none;
       border: none;
       color: var(--text-dim);
@@ -87,8 +88,39 @@
     }
 
     .settings-btn:hover,
-    .settings-btn:active {
+    .settings-btn:active,
+    .reorder-btn:hover,
+    .reorder-btn:active {
       color: var(--text);
+    }
+
+    .reorder-btn.active {
+      color: var(--accent);
+    }
+
+    /* ── Reorder arrows ── */
+    .reorder-arrows {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-left: 4px;
+    }
+
+    .reorder-arrows button {
+      background: var(--surface-2);
+      border: none;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+
+    .reorder-arrows button:active {
+      background: var(--accent);
+      color: white;
     }
 
     /* ── Stats bar ── */
@@ -942,6 +974,7 @@
     <h1>✦ Habit Tracker</h1>
     <div class="header-right">
       <div class="date" id="dateDisplay"></div>
+      <button class="reorder-btn" id="reorderBtn" aria-label="Reorder" onclick="toggleReorderMode()">↕️</button>
       <button class="settings-btn" id="settingsBtn" aria-label="Settings">⚙️</button>
     </div>
   </div>
@@ -1025,6 +1058,7 @@
     const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 6"/></svg>';
 
     let showCompleted = false;
+    let reorderMode = false;
     let addType = 'habit';
     let childNames = [];
 
@@ -1237,6 +1271,10 @@
                 <div class="week-dots">${week.map(d => `<div class="dot ${d ? 'filled' : ''}"></div>`).join('')}</div>
               </div>
               <div class="group-count">${childrenDoneCount}/${item.children.length}</div>
+              ${reorderMode ? `<div class="reorder-arrows">
+                <button onclick="moveItem('${item.id}',-1)">▲</button>
+                <button onclick="moveItem('${item.id}',1)">▼</button>
+              </div>` : ''}
               <button class="habit-delete" onclick="deleteItem('${item.id}')" aria-label="Delete">✕</button>
             </div>
             <div class="group-children">
@@ -1270,6 +1308,10 @@
               <div class="habit-streak">🔥 <span>${streak} day${streak !== 1 ? 's' : ''}</span> streak</div>
               <div class="week-dots">${week.map(d => `<div class="dot ${d ? 'filled' : ''}"></div>`).join('')}</div>
             </div>
+            ${reorderMode ? `<div class="reorder-arrows">
+              <button onclick="moveItem('${item.id}',-1)">▲</button>
+              <button onclick="moveItem('${item.id}',1)">▼</button>
+            </div>` : ''}
             <button class="habit-delete" onclick="deleteItem('${item.id}')" aria-label="Delete">✕</button>
           </div>`;
         }
@@ -1402,6 +1444,25 @@
 
     function toggleShowCompleted() {
       showCompleted = !showCompleted;
+      render();
+    }
+
+    function toggleReorderMode() {
+      reorderMode = !reorderMode;
+      document.getElementById('reorderBtn').classList.toggle('active', reorderMode);
+      render();
+    }
+
+    function moveItem(id, direction) {
+      const data = load();
+      const idx = data.items.findIndex(i => i.id === id);
+      if (idx < 0) return;
+      const newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= data.items.length) return;
+      const temp = data.items[idx];
+      data.items[idx] = data.items[newIdx];
+      data.items[newIdx] = temp;
+      save(data);
       render();
     }
 
