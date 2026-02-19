@@ -279,14 +279,34 @@
       background: none;
       border: none;
       color: var(--text-dim);
-      font-size: 1.2rem;
+      font-size: 0.9rem;
       cursor: pointer;
       padding: 6px;
-      opacity: 0.4;
-      transition: opacity 0.2s, color 0.2s;
+      opacity: 0.5;
+      transition: opacity 0.2s;
     }
 
-    .habit-delete:hover,
+    .habit-delete:hover {
+      opacity: 1;
+      color: var(--danger);
+    }
+
+    .habit-edit {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 6px;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+
+    .habit-edit:hover {
+      opacity: 1;
+      color: var(--accent);
+    }
+
     .habit-delete:active {
       opacity: 1;
       color: var(--danger);
@@ -859,12 +879,12 @@
       letter-spacing: 0.5px;
     }
 
-    /* ── Streak Heatmap ── */
-    .heatmap-section {
+    /* ── Calendar Grid (horizontal scrollable) ── */
+    .calendar-section {
       margin-bottom: 24px;
     }
 
-    .heatmap-section h3 {
+    .calendar-section h3 {
       font-size: 0.9rem;
       color: var(--text-dim);
       margin-bottom: 12px;
@@ -872,56 +892,81 @@
       letter-spacing: 0.5px;
     }
 
-    .heatmap-months {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .heatmap-month {
+    .calendar-wrap {
       background: var(--surface);
       border-radius: var(--radius);
       padding: 14px;
       border: 1px solid rgba(255, 255, 255, 0.04);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
-    .heatmap-month-label {
-      font-size: 0.8rem;
+    .calendar-months {
+      display: flex;
+      gap: 0;
+      margin-left: 32px;
+      margin-bottom: 4px;
+    }
+
+    .calendar-month-label {
+      font-size: 0.7rem;
       font-weight: 600;
       color: var(--text-dim);
-      margin-bottom: 8px;
+      text-align: left;
+      white-space: nowrap;
     }
 
-    .heatmap-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 4px;
+    .calendar-body {
+      display: flex;
+      gap: 0;
     }
 
-    .heatmap-day-label {
-      font-size: 0.55rem;
+    .calendar-day-labels {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .calendar-day-label {
+      height: 16px;
+      line-height: 16px;
+      font-size: 0.6rem;
       color: var(--text-dim);
-      text-align: center;
-      padding: 2px 0;
+      text-align: right;
+      width: 26px;
     }
 
-    .heatmap-cell {
-      aspect-ratio: 1;
-      border-radius: 4px;
+    .calendar-grid {
+      display: flex;
+      gap: 3px;
+    }
+
+    .calendar-col {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .calendar-cell {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
       background: var(--surface-2);
-      position: relative;
+      flex-shrink: 0;
     }
 
-    .heatmap-cell.filled {
+    .calendar-cell.filled {
       background: var(--green);
     }
 
-    .heatmap-cell.today {
+    .calendar-cell.today {
       outline: 2px solid var(--accent);
       outline-offset: -1px;
     }
 
-    .heatmap-cell.empty {
+    .calendar-cell.empty {
       background: transparent;
     }
 
@@ -1005,8 +1050,8 @@
   <!-- Add Habit/Group Modal -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
-      <h2>Add New</h2>
-      <div class="type-toggle">
+      <h2 id="modalTitle">Add New</h2>
+      <div class="type-toggle" id="typeToggle">
         <button class="active" id="typeHabit" onclick="setAddType('habit')">Habit</button>
         <button id="typeGroup" onclick="setAddType('group')">Group</button>
       </div>
@@ -1059,6 +1104,8 @@
 
     let showCompleted = false;
     let reorderMode = false;
+    let editingId = null;
+    let editChildData = []; // [{id, name}] for tracking children during edit
     let addType = 'habit';
     let childNames = [];
 
@@ -1275,6 +1322,7 @@
                 <button onclick="moveItem('${item.id}',-1)">▲</button>
                 <button onclick="moveItem('${item.id}',1)">▼</button>
               </div>` : ''}
+              <button class="habit-edit" onclick="editItem('${item.id}')" aria-label="Edit">✏️</button>
               <button class="habit-delete" onclick="deleteItem('${item.id}')" aria-label="Delete">✕</button>
             </div>
             <div class="group-children">
@@ -1312,6 +1360,7 @@
               <button onclick="moveItem('${item.id}',-1)">▲</button>
               <button onclick="moveItem('${item.id}',1)">▼</button>
             </div>` : ''}
+            <button class="habit-edit" onclick="editItem('${item.id}')" aria-label="Edit">✏️</button>
             <button class="habit-delete" onclick="deleteItem('${item.id}')" aria-label="Delete">✕</button>
           </div>`;
         }
@@ -1496,11 +1545,56 @@
 
     function renderChildTags() {
       document.getElementById('childTags').innerHTML = childNames.map((n, i) =>
-        `<div class="child-tag">${escapeHtml(n)}<span class="remove" onclick="removeChildTag(${i})">✕</span></div>`
+        `<div class="child-tag"><span onclick="editChildName(${i})" style="cursor:pointer">${escapeHtml(n)}</span><span class="remove" onclick="removeChildTag(${i})">✕</span></div>`
       ).join('');
     }
 
+    function editChildName(idx) {
+      const current = childNames[idx];
+      const newName = prompt('Rename item:', current);
+      if (newName && newName.trim() && newName.trim() !== current) {
+        childNames[idx] = newName.trim();
+        if (editChildData.length > idx) {
+          editChildData[idx].name = newName.trim();
+        }
+        renderChildTags();
+      }
+    }
+
+    function editItem(id) {
+      const data = load();
+      const item = data.items.find(i => i.id === id);
+      if (!item) return;
+
+      editingId = id;
+      document.getElementById('modalTitle').textContent = 'Edit';
+      document.getElementById('typeToggle').style.display = 'none';
+
+      input.value = item.name;
+
+      if (item.type === 'group') {
+        addType = 'group';
+        setAddType('group');
+        editChildData = item.children.map(c => ({ id: c.id, name: c.name }));
+        childNames = editChildData.map(c => c.name);
+        renderChildTags();
+      } else {
+        addType = 'habit';
+        setAddType('habit');
+        editChildData = [];
+        childNames = [];
+        renderChildTags();
+      }
+
+      modal.classList.add('open');
+      setTimeout(() => input.focus(), 300);
+    }
+
     document.getElementById('addBtn').onclick = () => {
+      editingId = null;
+      editChildData = [];
+      document.getElementById('modalTitle').textContent = 'Add New';
+      document.getElementById('typeToggle').style.display = '';
       modal.classList.add('open');
       addType = 'habit';
       setAddType('habit');
@@ -1514,6 +1608,8 @@
       modal.classList.remove('open');
       input.value = '';
       childNames = [];
+      editingId = null;
+      editChildData = [];
       renderChildTags();
     };
 
@@ -1522,24 +1618,57 @@
       if (!name) return;
 
       const data = load();
-      if (addType === 'habit') {
-        data.items.push({ id: generateId(), type: 'habit', name, completed: [] });
-      } else {
-        if (childNames.length === 0) {
-          alert('Please add at least one item to the group.');
-          return;
+
+      if (editingId) {
+        // Edit existing item
+        const item = data.items.find(i => i.id === editingId);
+        if (!item) return;
+        item.name = name;
+        if (item.type === 'group') {
+          // Build new children list preserving completion data
+          const newChildren = [];
+          editChildData.forEach(ec => {
+            const existing = item.children.find(c => c.id === ec.id);
+            if (existing) {
+              existing.name = ec.name;
+              newChildren.push(existing);
+            }
+          });
+          // Add brand new children (added via input, not in editChildData)
+          childNames.forEach((cn, i) => {
+            if (i >= editChildData.length || !editChildData[i].id) {
+              newChildren.push({ id: generateId(), name: cn, completed: [] });
+            }
+          });
+          item.children = newChildren;
+          if (item.children.length === 0) {
+            alert('A group must have at least one item.');
+            return;
+          }
         }
-        data.items.push({
-          id: generateId(),
-          type: 'group',
-          name,
-          completed: [],
-          children: childNames.map(n => ({ id: generateId(), name: n, completed: [] }))
-        });
+      } else {
+        // Add new item
+        if (addType === 'habit') {
+          data.items.push({ id: generateId(), type: 'habit', name, completed: [] });
+        } else {
+          if (childNames.length === 0) {
+            alert('Please add at least one item to the group.');
+            return;
+          }
+          data.items.push({
+            id: generateId(),
+            type: 'group',
+            name,
+            completed: [],
+            children: childNames.map(n => ({ id: generateId(), name: n, completed: [] }))
+          });
+        }
       }
       save(data);
       input.value = '';
       childNames = [];
+      editingId = null;
+      editChildData = [];
       renderChildTags();
       modal.classList.remove('open');
       render();
@@ -1557,6 +1686,8 @@
         modal.classList.remove('open');
         input.value = '';
         childNames = [];
+        editingId = null;
+        editChildData = [];
         renderChildTags();
       }
     });
@@ -1655,52 +1786,77 @@
       const todayStr = getEffectiveDate(settings);
       const today = new Date(todayStr + 'T12:00:00');
       const datesSet = new Set(completedDates);
-      const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-      let html = '';
+      const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-      // Show last 3 months
-      for (let m = 0; m <= 2; m++) {
-        const monthDate = new Date(today);
-        monthDate.setMonth(monthDate.getMonth() - m);
-        const year = monthDate.getFullYear();
-        const month = monthDate.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const monthName = firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      // Go back ~4 months (18 weeks)
+      const numWeeks = 18;
+      const endDate = new Date(today);
+      // Move endDate to the upcoming Saturday (end of current week)
+      const endDow = endDate.getDay(); // 0=Sun
+      endDate.setDate(endDate.getDate() + (6 - endDow));
+      const startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - (numWeeks * 7 - 1));
 
-        // Day of week for first day (0=Sun, convert to Mon-start: Mon=0)
-        let startDow = firstDay.getDay() - 1;
-        if (startDow < 0) startDow = 6;
-
-        let grid = '';
-        // Day labels
-        grid += dayLabels.map(d => `<div class="heatmap-day-label">${d}</div>`).join('');
-
-        // Empty cells before first day
-        for (let e = 0; e < startDow; e++) {
-          grid += '<div class="heatmap-cell empty"></div>';
+      // Build week columns (each column = 7 days, Sun-Sat)
+      const weeks = [];
+      const cursor = new Date(startDate);
+      for (let w = 0; w < numWeeks; w++) {
+        const week = [];
+        for (let d = 0; d < 7; d++) {
+          const ds = cursor.toISOString().slice(0, 10);
+          week.push({
+            date: ds,
+            filled: datesSet.has(ds),
+            future: ds > todayStr,
+            today: ds === todayStr
+          });
+          cursor.setDate(cursor.getDate() + 1);
         }
-
-        // Days of month
-        for (let d = 1; d <= lastDay.getDate(); d++) {
-          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-          const isFuture = dateStr > todayStr;
-          const isToday = dateStr === todayStr;
-          const isFilled = datesSet.has(dateStr);
-          if (isFuture) {
-            grid += '<div class="heatmap-cell empty"></div>';
-          } else {
-            grid += `<div class="heatmap-cell ${isFilled ? 'filled' : ''} ${isToday ? 'today' : ''}"></div>`;
-          }
-        }
-
-        html += `<div class="heatmap-month">
-          <div class="heatmap-month-label">${monthName}</div>
-          <div class="heatmap-grid">${grid}</div>
-        </div>`;
+        weeks.push(week);
       }
 
-      return html;
+      // Build month labels - track which weeks start a new month
+      let monthsHtml = '';
+      let prevMonth = -1;
+      weeks.forEach((week, wi) => {
+        // Use the first day of the week that's actually in a new month
+        const firstDate = new Date(week[0].date + 'T12:00:00');
+        const m = firstDate.getMonth();
+        const y = firstDate.getFullYear();
+        if (m !== prevMonth) {
+          const label = firstDate.toLocaleDateString('en-US', { month: 'short' })
+            + (m === 0 || prevMonth === -1 ? ' ' + y : '');
+          monthsHtml += `<div class="calendar-month-label" style="min-width:19px;width:19px">${label}</div>`;
+          prevMonth = m;
+        } else {
+          monthsHtml += `<div class="calendar-month-label" style="min-width:19px;width:19px"></div>`;
+        }
+      });
+
+      // Day labels column
+      let dayLabelsHtml = dayLabels.map(d => `<div class="calendar-day-label">${d}</div>`).join('');
+
+      // Grid columns
+      let gridHtml = '';
+      weeks.forEach(week => {
+        let col = '';
+        week.forEach(day => {
+          if (day.future) {
+            col += '<div class="calendar-cell empty"></div>';
+          } else {
+            col += `<div class="calendar-cell ${day.filled ? 'filled' : ''} ${day.today ? 'today' : ''}"></div>`;
+          }
+        });
+        gridHtml += `<div class="calendar-col">${col}</div>`;
+      });
+
+      return `<div class="calendar-wrap" id="calendarWrap">
+        <div class="calendar-months">${monthsHtml}</div>
+        <div class="calendar-body">
+          <div class="calendar-day-labels">${dayLabelsHtml}</div>
+          <div class="calendar-grid">${gridHtml}</div>
+        </div>
+      </div>`;
     }
 
     function showDetail(id) {
@@ -1742,10 +1898,10 @@
         </div>
       </div>`;
 
-      // Heatmap
-      bodyHtml += `<div class="heatmap-section">
-        <h3>Streak Map</h3>
-        <div class="heatmap-months">${buildHeatmapHtml(completedDates, settings)}</div>
+      // Calendar
+      bodyHtml += `<div class="calendar-section">
+        <h3>Calendar</h3>
+        ${buildHeatmapHtml(completedDates, settings)}
       </div>`;
 
       // Group children breakdown
@@ -1767,6 +1923,11 @@
       document.getElementById('detailBody').innerHTML = bodyHtml;
       detailOverlay.scrollTop = 0;
       detailOverlay.classList.add('open');
+      // Auto-scroll calendar to the right (most recent)
+      setTimeout(() => {
+        const cw = document.getElementById('calendarWrap');
+        if (cw) cw.scrollLeft = cw.scrollWidth;
+      }, 50);
     }
 
     function showChildDetail(groupId, childId) {
@@ -1809,14 +1970,19 @@
         </div>
       </div>`;
 
-      bodyHtml += `<div class="heatmap-section">
-        <h3>Streak Map</h3>
-        <div class="heatmap-months">${buildHeatmapHtml(completedDates, settings)}</div>
+      bodyHtml += `<div class="calendar-section">
+        <h3>Calendar</h3>
+        ${buildHeatmapHtml(completedDates, settings)}
       </div>`;
 
       document.getElementById('detailBody').innerHTML = bodyHtml;
       detailOverlay.scrollTop = 0;
       detailOverlay.classList.add('open');
+      // Auto-scroll calendar to the right (most recent)
+      setTimeout(() => {
+        const cw = document.getElementById('calendarWrap');
+        if (cw) cw.scrollLeft = cw.scrollWidth;
+      }, 50);
     }
 
     // ── Service Worker Registration ──

@@ -13,6 +13,7 @@ A minimalist, offline-first habit tracking app built as a **Progressive Web App*
 - 👻 **Auto-hide completed** — finished items disappear to focus on what's left; toggle "Show completed" to reveal
 - 📋 **Detail view** — tap any habit, group, or group item to see current streak, best streak, total days, completion rate, and a 3-month streak heatmap (most recent month first)
 - ↕️ **Reorder habits** — tap the ↕️ button in the header to enter reorder mode; use ▲/▼ arrows to rearrange
+- ✏️ **Edit habits & groups** — tap the ✏️ button to rename a habit, or edit a group's name and children
 - 🎉 **All-done celebration** — congratulatory message when everything is done for the day
 - 🔥 **Streak tracking** — per-habit, per-group, and best-streak stats
 - ⭐ **Perfect day streak** — tracks consecutive days where every single item was completed
