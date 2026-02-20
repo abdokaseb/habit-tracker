@@ -704,6 +704,45 @@
       cursor: pointer;
     }
 
+    /* ── Day-of-week picker ── */
+    .day-picker {
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+
+    .day-picker label {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .day-picker-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .day-picker-btn {
+      flex: 1;
+      padding: 10px 0;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--bg);
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .day-picker-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
     .modal-actions {
       display: flex;
       gap: 10px;
@@ -1056,6 +1095,10 @@
         <button id="typeGroup" onclick="setAddType('group')">Group</button>
       </div>
       <input type="text" id="habitInput" placeholder="e.g. Read 20 minutes" autocomplete="off">
+      <div class="day-picker" id="dayPicker">
+        <label>Active days:</label>
+        <div class="day-picker-row" id="dayPickerRow"></div>
+      </div>
       <div class="children-input" id="childrenInput">
         <label>Group items:</label>
         <div class="child-tags" id="childTags"></div>
@@ -1108,6 +1151,46 @@
     let editChildData = []; // [{id, name}] for tracking children during edit
     let addType = 'habit';
     let childNames = [];
+    let selectedDays = [0, 1, 2, 3, 4, 5, 6]; // default: all days
+    const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+    // ── Day picker ──
+    function renderDayPicker() {
+      const row = document.getElementById('dayPickerRow');
+      row.innerHTML = DAY_LABELS.map((label, i) =>
+        `<button type="button" class="day-picker-btn ${selectedDays.includes(i) ? 'active' : ''}" onclick="toggleDay(${i})">${label}</button>`
+      ).join('');
+    }
+
+    function toggleDay(day) {
+      const idx = selectedDays.indexOf(day);
+      if (idx > -1) {
+        if (selectedDays.length <= 1) return; // must keep at least 1 day
+        selectedDays.splice(idx, 1);
+      } else {
+        selectedDays.push(day);
+        selectedDays.sort();
+      }
+      renderDayPicker();
+    }
+
+    // ── Check if item is active on a given effective date ──
+    function isItemActiveOnDate(item, dateStr, settings) {
+      const days = item.activeDays;
+      if (!days || days.length === 0 || days.length === 7) return true;
+      const resetHour = (settings && settings.resetHour) || 0;
+      const d = new Date(dateStr + 'T12:00:00');
+      // When resetHour > 13, the effective date is the previous calendar day,
+      // but 1 PM falls on the next calendar day within the reset period.
+      if (resetHour > 13) {
+        d.setDate(d.getDate() + 1);
+      }
+      return days.includes(d.getDay());
+    }
+
+    function isItemActiveToday(item, settings) {
+      return isItemActiveOnDate(item, getEffectiveDate(settings), settings);
+    }
 
     // ── ID generation ──
     function generateId() {
@@ -1160,18 +1243,29 @@
     }
 
     // ── Streak Calculation ──
-    function calcStreak(completedDates, settings) {
+    function calcStreak(completedDates, settings, activeDays) {
       if (!completedDates || completedDates.length === 0) return 0;
       const sorted = [...completedDates].sort().reverse();
       const todayStr = getEffectiveDate(settings);
+      const hasActiveDays = activeDays && activeDays.length > 0 && activeDays.length < 7;
       let streak = 0;
       let checkDate = new Date(todayStr + 'T12:00:00');
 
       if (sorted[0] !== todayStr) {
-        checkDate.setDate(checkDate.getDate() - 1);
+        // If today is not an active day, don't penalize — just step back
+        if (hasActiveDays && !activeDays.includes(checkDate.getDay())) {
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
       }
       for (let i = 0; i < 365; i++) {
         const dateStr = checkDate.toISOString().slice(0, 10);
+        // Skip inactive days
+        if (hasActiveDays && !activeDays.includes(checkDate.getDay())) {
+          checkDate.setDate(checkDate.getDate() - 1);
+          continue;
+        }
         if (sorted.includes(dateStr)) {
           streak++;
           checkDate.setDate(checkDate.getDate() - 1);
@@ -1185,6 +1279,7 @@
     // ── Group streak: consecutive days all children completed ──
     function calcGroupStreak(item, settings) {
       const todayStr = getEffectiveDate(settings);
+      const hasActiveDays = item.activeDays && item.activeDays.length > 0 && item.activeDays.length < 7;
       let streak = 0;
       let checkDate = new Date(todayStr + 'T12:00:00');
 
@@ -1194,6 +1289,11 @@
       }
       for (let i = 0; i < 365; i++) {
         const dateStr = checkDate.toISOString().slice(0, 10);
+        // Skip inactive days
+        if (hasActiveDays && !item.activeDays.includes(checkDate.getDay())) {
+          checkDate.setDate(checkDate.getDate() - 1);
+          continue;
+        }
         if (isGroupDoneOnDate(item, dateStr)) {
           streak++;
           checkDate.setDate(checkDate.getDate() - 1);
@@ -1220,12 +1320,12 @@
       let streak = 0;
       let checkDate = new Date(todayStr + 'T12:00:00');
 
-      if (!isAllDoneOnDate(data.items, todayStr)) {
+      if (!isAllDoneOnDate(data.items, todayStr, settings)) {
         checkDate.setDate(checkDate.getDate() - 1);
       }
       for (let i = 0; i < 365; i++) {
         const dateStr = checkDate.toISOString().slice(0, 10);
-        if (isAllDoneOnDate(data.items, dateStr)) {
+        if (isAllDoneOnDate(data.items, dateStr, settings)) {
           streak++;
           checkDate.setDate(checkDate.getDate() - 1);
         } else {
@@ -1235,8 +1335,10 @@
       return streak;
     }
 
-    function isAllDoneOnDate(items, dateStr) {
+    function isAllDoneOnDate(items, dateStr, settings) {
       return items.every(item => {
+        // Skip items not active on this date
+        if (!isItemActiveOnDate(item, dateStr, settings)) return true;
         if (item.type === 'group') return isGroupDoneOnDate(item, dateStr);
         return item.completed && item.completed.includes(dateStr);
       });
@@ -1295,6 +1397,9 @@
       let html = '';
 
       data.items.forEach((item, idx) => {
+        // Skip items not active today
+        if (!isItemActiveToday(item, data.settings)) return;
+
         if (item.type === 'group') {
           const groupDone = isGroupDoneOnDate(item, todayStr);
           const childrenDoneCount = item.children.filter(c => c.completed && c.completed.includes(todayStr)).length;
@@ -1308,6 +1413,8 @@
           if (effectivelyDone) doneCount++;
 
           const isHiding = effectivelyDone && !showCompleted;
+          const dayInfo = item.activeDays && item.activeDays.length < 7
+            ? `<div style="font-size:0.65rem;color:var(--text-dim);margin-top:2px">${item.activeDays.map(d => DAY_LABELS[d]).join(' ')}</div>` : '';
 
           html += `<div class="group-card ${effectivelyDone ? 'done' : ''} ${isHiding ? 'hiding' : ''}" data-id="${item.id}">
             <div class="group-header">
@@ -1315,6 +1422,7 @@
               <div style="flex:1" onclick="showDetail('${item.id}')">
                 <div class="group-name">${escapeHtml(item.name)}</div>
                 <div class="group-streak">🔥 <span>${streak} day${streak !== 1 ? 's' : ''}</span> streak</div>
+                ${dayInfo}
                 <div class="week-dots">${week.map(d => `<div class="dot ${d ? 'filled' : ''}"></div>`).join('')}</div>
               </div>
               <div class="group-count">${childrenDoneCount}/${item.children.length}</div>
@@ -1340,7 +1448,7 @@
         } else {
           // Standalone habit
           const isDone = item.completed && item.completed.includes(todayStr);
-          const streak = calcStreak(item.completed, data.settings);
+          const streak = calcStreak(item.completed, data.settings, item.activeDays);
           if (streak > bestStreak) bestStreak = streak;
           const week = last7Days(item.completed, data.settings);
 
@@ -1348,12 +1456,15 @@
           if (isDone) doneCount++;
 
           const isHiding = isDone && !showCompleted;
+          const dayInfo = item.activeDays && item.activeDays.length < 7
+            ? `<div style="font-size:0.65rem;color:var(--text-dim);margin-top:2px">${item.activeDays.map(d => DAY_LABELS[d]).join(' ')}</div>` : '';
 
           html += `<div class="habit-card ${isDone ? 'done' : ''} ${isHiding ? 'hiding' : ''}" data-id="${item.id}">
             <div class="habit-check" onclick="toggleHabit('${item.id}')">${CHECK_SVG}</div>
             <div class="habit-info" onclick="showDetail('${item.id}')">
               <div class="habit-name">${escapeHtml(item.name)}</div>
               <div class="habit-streak">🔥 <span>${streak} day${streak !== 1 ? 's' : ''}</span> streak</div>
+              ${dayInfo}
               <div class="week-dots">${week.map(d => `<div class="dot ${d ? 'filled' : ''}"></div>`).join('')}</div>
             </div>
             ${reorderMode ? `<div class="reorder-arrows">
@@ -1572,6 +1683,10 @@
 
       input.value = item.name;
 
+      // Load active days
+      selectedDays = (item.activeDays && item.activeDays.length > 0) ? [...item.activeDays] : [0, 1, 2, 3, 4, 5, 6];
+      renderDayPicker();
+
       if (item.type === 'group') {
         addType = 'group';
         setAddType('group');
@@ -1601,6 +1716,8 @@
       childNames = [];
       renderChildTags();
       input.value = '';
+      selectedDays = [0, 1, 2, 3, 4, 5, 6];
+      renderDayPicker();
       setTimeout(() => input.focus(), 300);
     };
 
@@ -1618,12 +1735,14 @@
       if (!name) return;
 
       const data = load();
+      const daysToSave = [...selectedDays].sort();
 
       if (editingId) {
         // Edit existing item
         const item = data.items.find(i => i.id === editingId);
         if (!item) return;
         item.name = name;
+        item.activeDays = daysToSave;
         if (item.type === 'group') {
           // Build new children list preserving completion data
           const newChildren = [];
@@ -1649,7 +1768,7 @@
       } else {
         // Add new item
         if (addType === 'habit') {
-          data.items.push({ id: generateId(), type: 'habit', name, completed: [] });
+          data.items.push({ id: generateId(), type: 'habit', name, completed: [], activeDays: daysToSave });
         } else {
           if (childNames.length === 0) {
             alert('Please add at least one item to the group.');
@@ -1660,6 +1779,7 @@
             type: 'group',
             name,
             completed: [],
+            activeDays: daysToSave,
             children: childNames.map(n => ({ id: generateId(), name: n, completed: [] }))
           });
         }
@@ -1669,6 +1789,7 @@
       childNames = [];
       editingId = null;
       editChildData = [];
+      selectedDays = [0, 1, 2, 3, 4, 5, 6];
       renderChildTags();
       modal.classList.remove('open');
       render();
@@ -1752,33 +1873,61 @@
       return (item.completed || []).slice().sort();
     }
 
-    function calcBestStreak(completedDates) {
+    function calcBestStreak(completedDates, activeDays) {
       if (!completedDates || completedDates.length === 0) return 0;
       const sorted = [...completedDates].sort();
+      const hasActiveDays = activeDays && activeDays.length > 0 && activeDays.length < 7;
       let best = 1;
       let current = 1;
       for (let i = 1; i < sorted.length; i++) {
         const prev = new Date(sorted[i - 1] + 'T12:00:00');
         const curr = new Date(sorted[i] + 'T12:00:00');
         const diff = (curr - prev) / (1000 * 60 * 60 * 24);
-        if (diff === 1) {
-          current++;
-          if (current > best) best = current;
-        } else if (diff > 1) {
+        if (diff <= 1) {
+          if (diff === 1) { current++; if (current > best) best = current; }
+          // diff === 0 means duplicate, ignore
+        } else if (hasActiveDays) {
+          // Check if all days between prev and curr are inactive
+          let allInactive = true;
+          const check = new Date(prev);
+          check.setDate(check.getDate() + 1);
+          while (check < curr) {
+            if (activeDays.includes(check.getDay())) { allInactive = false; break; }
+            check.setDate(check.getDate() + 1);
+          }
+          if (allInactive) {
+            current++;
+            if (current > best) best = current;
+          } else {
+            current = 1;
+          }
+        } else {
           current = 1;
         }
-        // diff === 0 means duplicate, ignore
       }
       return best;
     }
 
-    function calcCompletionRate(completedDates, settings) {
+    function calcCompletionRate(completedDates, settings, activeDays) {
       if (!completedDates || completedDates.length === 0) return 0;
       const sorted = [...completedDates].sort();
       const first = new Date(sorted[0] + 'T12:00:00');
       const todayStr = getEffectiveDate(settings);
       const today = new Date(todayStr + 'T12:00:00');
-      const totalDays = Math.max(1, Math.round((today - first) / (1000 * 60 * 60 * 24)) + 1);
+      const hasActiveDays = activeDays && activeDays.length > 0 && activeDays.length < 7;
+      let totalDays;
+      if (hasActiveDays) {
+        // Count only active days between first and today
+        totalDays = 0;
+        const cursor = new Date(first);
+        while (cursor <= today) {
+          if (activeDays.includes(cursor.getDay())) totalDays++;
+          cursor.setDate(cursor.getDate() + 1);
+        }
+        totalDays = Math.max(1, totalDays);
+      } else {
+        totalDays = Math.max(1, Math.round((today - first) / (1000 * 60 * 60 * 24)) + 1);
+      }
       return Math.round((completedDates.length / totalDays) * 100);
     }
 
@@ -1868,10 +2017,10 @@
       const completedDates = getCompletedDatesForItem(item, settings);
       const currentStreak = item.type === 'group'
         ? calcGroupStreak(item, settings)
-        : calcStreak(item.completed, settings);
-      const bestStreak = calcBestStreak(completedDates);
+        : calcStreak(item.completed, settings, item.activeDays);
+      const bestStreak = calcBestStreak(completedDates, item.activeDays);
       const totalDays = completedDates.length;
-      const rate = calcCompletionRate(completedDates, settings);
+      const rate = calcCompletionRate(completedDates, settings, item.activeDays);
 
       document.getElementById('detailTitle').textContent = item.name;
       document.getElementById('detailType').textContent = item.type === 'group' ? 'Group' : 'Habit';
@@ -1908,8 +2057,8 @@
       if (item.type === 'group' && item.children.length > 0) {
         bodyHtml += `<div class="detail-children"><h3>Items</h3>`;
         item.children.forEach(child => {
-          const cStreak = calcStreak(child.completed, settings);
-          const cBest = calcBestStreak(child.completed || []);
+          const cStreak = calcStreak(child.completed, settings, item.activeDays);
+          const cBest = calcBestStreak(child.completed || [], item.activeDays);
           const cTotal = (child.completed || []).length;
           bodyHtml += `<div class="detail-child-row">
             <div class="detail-child-name">${escapeHtml(child.name)}</div>
@@ -1939,10 +2088,10 @@
 
       const settings = data.settings;
       const completedDates = (child.completed || []).slice().sort();
-      const currentStreak = calcStreak(child.completed, settings);
-      const bestStreak = calcBestStreak(completedDates);
+      const currentStreak = calcStreak(child.completed, settings, group.activeDays);
+      const bestStreak = calcBestStreak(completedDates, group.activeDays);
       const totalDays = completedDates.length;
-      const rate = calcCompletionRate(completedDates, settings);
+      const rate = calcCompletionRate(completedDates, settings, group.activeDays);
 
       document.getElementById('detailTitle').textContent = child.name;
       document.getElementById('detailType').textContent = 'Group Item';

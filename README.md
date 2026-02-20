@@ -18,6 +18,7 @@ A minimalist, offline-first habit tracking app built as a **Progressive Web App*
 - 🔥 **Streak tracking** — per-habit, per-group, and best-streak stats
 - ⭐ **Perfect day streak** — tracks consecutive days where every single item was completed
 - ⏰ **Custom reset hour** — configure when your "day" resets (e.g. 2 AM for night owls)
+- 📅 **Day-of-week scheduling** — assign habits to specific days (e.g. Mon/Wed/Fri); all days selected by default; streaks skip inactive days
 - 📊 **Stats dashboard** — done today / total / best streak / perfect days
 - 💾 **Local storage** — all data persisted in `localStorage`, never leaves your device
 - 📴 **Fully offline** — Service Worker with cache-first strategy
@@ -67,13 +68,15 @@ habit_tracking/
       "id": "abc123",
       "type": "habit",
       "name": "Meditate",
-      "completed": ["2026-02-17", "2026-02-18"]
+      "completed": ["2026-02-17", "2026-02-18"],
+      "activeDays": [0,1,2,3,4,5,6]
     },
     {
       "id": "def456",
       "type": "group",
       "name": "Morning Routine",
       "completed": ["2026-02-18"],
+      "activeDays": [1,3,5],
       "children": [
         { "id": "g1", "name": "Brush teeth", "completed": ["2026-02-18"] },
         { "id": "g2", "name": "Stretch", "completed": ["2026-02-17"] }
