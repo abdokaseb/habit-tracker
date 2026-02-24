@@ -1197,6 +1197,14 @@
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     }
 
+    // ── Local date string (avoids toISOString UTC bug) ──
+    function toLocalDateStr(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
     // ── Effective date (respects reset hour) ──
     function getEffectiveDate(settings) {
       const now = new Date();
@@ -1204,9 +1212,9 @@
       if (now.getHours() < resetHour) {
         const yesterday = new Date(now);
         yesterday.setDate(yesterday.getDate() - 1);
-        return yesterday.toISOString().slice(0, 10);
+        return toLocalDateStr(yesterday);
       }
-      return now.toISOString().slice(0, 10);
+      return toLocalDateStr(now);
     }
 
     // ── Data Layer ──
@@ -1260,7 +1268,7 @@
         }
       }
       for (let i = 0; i < 365; i++) {
-        const dateStr = checkDate.toISOString().slice(0, 10);
+        const dateStr = toLocalDateStr(checkDate);
         // Skip inactive days
         if (hasActiveDays && !activeDays.includes(checkDate.getDay())) {
           checkDate.setDate(checkDate.getDate() - 1);
@@ -1288,7 +1296,7 @@
         checkDate.setDate(checkDate.getDate() - 1);
       }
       for (let i = 0; i < 365; i++) {
-        const dateStr = checkDate.toISOString().slice(0, 10);
+        const dateStr = toLocalDateStr(checkDate);
         // Skip inactive days
         if (hasActiveDays && !item.activeDays.includes(checkDate.getDay())) {
           checkDate.setDate(checkDate.getDate() - 1);
@@ -1324,7 +1332,7 @@
         checkDate.setDate(checkDate.getDate() - 1);
       }
       for (let i = 0; i < 365; i++) {
-        const dateStr = checkDate.toISOString().slice(0, 10);
+        const dateStr = toLocalDateStr(checkDate);
         if (isAllDoneOnDate(data.items, dateStr, settings)) {
           streak++;
           checkDate.setDate(checkDate.getDate() - 1);
@@ -1352,7 +1360,7 @@
       for (let i = 6; i >= 0; i--) {
         const d = new Date(base);
         d.setDate(d.getDate() - i);
-        const ds = d.toISOString().slice(0, 10);
+        const ds = toLocalDateStr(d);
         result.push(completedDates && completedDates.includes(ds));
       }
       return result;
@@ -1365,7 +1373,7 @@
       for (let i = 6; i >= 0; i--) {
         const d = new Date(base);
         d.setDate(d.getDate() - i);
-        const ds = d.toISOString().slice(0, 10);
+        const ds = toLocalDateStr(d);
         result.push(isGroupDoneOnDate(item, ds));
       }
       return result;
@@ -1952,7 +1960,7 @@
       for (let w = 0; w < numWeeks; w++) {
         const week = [];
         for (let d = 0; d < 7; d++) {
-          const ds = cursor.toISOString().slice(0, 10);
+          const ds = toLocalDateStr(cursor);
           week.push({
             date: ds,
             filled: datesSet.has(ds),
