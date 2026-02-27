@@ -100,4 +100,4 @@ python -m http.server 8080
 ## 🚀 Deployment
 
 - Hosted via **GitHub Pages** — push to `main` branch to update
-- Service Worker cache version: `habit-tracker-v2` (bump in `sw.js` to force update)
+- **Service Worker** (`sw.js`): Cache-first. Cache name `habit-tracker-v2.0` (bump to force refresh on deploy)

@@ -1260,11 +1260,16 @@
       let checkDate = new Date(todayStr + 'T12:00:00');
 
       if (sorted[0] !== todayStr) {
-        // If today is not an active day, don't penalize — just step back
-        if (hasActiveDays && !activeDays.includes(checkDate.getDay())) {
-          checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-          checkDate.setDate(checkDate.getDate() - 1);
+        // Not done today — step back to find the most recent active day to start from.
+        // This handles weekly habits (e.g. Friday-only) correctly: when today is Friday
+        // but not yet completed, we look back at the previous Friday for the streak.
+        checkDate.setDate(checkDate.getDate() - 1);
+        if (hasActiveDays) {
+          // Skip past non-active days to land on the nearest previous active day
+          for (let s = 0; s < 7; s++) {
+            if (activeDays.includes(checkDate.getDay())) break;
+            checkDate.setDate(checkDate.getDate() - 1);
+          }
         }
       }
       for (let i = 0; i < 365; i++) {
@@ -1291,9 +1296,15 @@
       let streak = 0;
       let checkDate = new Date(todayStr + 'T12:00:00');
 
-      // Check if group is done today
+      // Check if group is done today; if not, step back to most recent active day
       if (!isGroupDoneOnDate(item, todayStr)) {
         checkDate.setDate(checkDate.getDate() - 1);
+        if (hasActiveDays) {
+          for (let s = 0; s < 7; s++) {
+            if (item.activeDays.includes(checkDate.getDay())) break;
+            checkDate.setDate(checkDate.getDate() - 1);
+          }
+        }
       }
       for (let i = 0; i < 365; i++) {
         const dateStr = toLocalDateStr(checkDate);
