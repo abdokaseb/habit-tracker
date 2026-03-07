@@ -1202,6 +1202,28 @@
       return days.includes(d.getDay());
     }
 
+    // Returns the effective weekday for a stored date string,
+    // applying the same resetHour > 13 offset as isItemActiveOnDate.
+    // Use this wherever we need to know which logical weekday a completion date belongs to.
+    function effectiveDayOfWeek(dateStr, settings) {
+      const resetHour = (settings && settings.resetHour) || 0;
+      const d = new Date(dateStr + 'T12:00:00');
+      if (resetHour > 13) d.setDate(d.getDate() + 1);
+      return d.getDay();
+    }
+
+    // Converts a PHYSICAL calendar cell date to the STORED effective date.
+    // With resetHour > 13, logical days start the evening before.
+    // e.g. resetHour=18: physical Saturday cell -> stored Friday effective date.
+    // This is the inverse of effectiveDayOfWeek's +1 shift.
+    function calendarDateToEffectiveDate(calDateStr, settings) {
+      const resetHour = (settings && settings.resetHour) || 0;
+      if (resetHour <= 13) return calDateStr;
+      const d = new Date(calDateStr + 'T12:00:00');
+      d.setDate(d.getDate() - 1);
+      return toLocalDateStr(d);
+    }
+
     function isItemActiveToday(item, settings) {
       return isItemActiveOnDate(item, getEffectiveDate(settings), settings);
     }
@@ -1267,28 +1289,33 @@
     // ── Streak Calculation ──
     function calcStreak(completedDates, settings, activeDays) {
       if (!completedDates || completedDates.length === 0) return 0;
-      const sorted = [...completedDates].sort().reverse();
+      const doneSet = new Set(completedDates);
       const todayStr = getEffectiveDate(settings);
       const hasActiveDays = activeDays && activeDays.length > 0 && activeDays.length < 7;
       let streak = 0;
       let checkDate = new Date(todayStr + 'T12:00:00');
 
-      if (sorted[0] !== todayStr) {
-        // If today is not an active day, don't penalize — just step back
-        if (hasActiveDays && !activeDays.includes(checkDate.getDay())) {
-          checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-          checkDate.setDate(checkDate.getDate() - 1);
+      // If today isn't completed, jump back to the most recent previous active day.
+      // Use effectiveDayOfWeek() so the resetHour > 13 offset is applied correctly.
+      if (!doneSet.has(todayStr)) {
+        checkDate.setDate(checkDate.getDate() - 1);
+        if (hasActiveDays) {
+          for (let s = 0; s < 7; s++) {
+            if (activeDays.includes(effectiveDayOfWeek(toLocalDateStr(checkDate), settings))) break;
+            checkDate.setDate(checkDate.getDate() - 1);
+          }
         }
       }
+
+      // Walk backwards counting consecutive active-day completions
       for (let i = 0; i < 365; i++) {
         const dateStr = toLocalDateStr(checkDate);
-        // Skip inactive days
-        if (hasActiveDays && !activeDays.includes(checkDate.getDay())) {
+        // Skip days that don't belong to an active weekday (using the same offset as isItemActiveOnDate)
+        if (hasActiveDays && !activeDays.includes(effectiveDayOfWeek(dateStr, settings))) {
           checkDate.setDate(checkDate.getDate() - 1);
           continue;
         }
-        if (sorted.includes(dateStr)) {
+        if (doneSet.has(dateStr)) {
           streak++;
           checkDate.setDate(checkDate.getDate() - 1);
         } else {
@@ -1305,14 +1332,22 @@
       let streak = 0;
       let checkDate = new Date(todayStr + 'T12:00:00');
 
-      // Check if group is done today
+      // If today isn't completed, jump back to the most recent previous active day.
+      // Use effectiveDayOfWeek() so the resetHour > 13 offset is applied correctly.
       if (!isGroupDoneOnDate(item, todayStr)) {
         checkDate.setDate(checkDate.getDate() - 1);
+        if (hasActiveDays) {
+          for (let s = 0; s < 7; s++) {
+            if (item.activeDays.includes(effectiveDayOfWeek(toLocalDateStr(checkDate), settings))) break;
+            checkDate.setDate(checkDate.getDate() - 1);
+          }
+        }
       }
+
       for (let i = 0; i < 365; i++) {
         const dateStr = toLocalDateStr(checkDate);
-        // Skip inactive days
-        if (hasActiveDays && !item.activeDays.includes(checkDate.getDay())) {
+        // Skip days that don't belong to an active weekday (using the same offset as isItemActiveOnDate)
+        if (hasActiveDays && !item.activeDays.includes(effectiveDayOfWeek(dateStr, settings))) {
           checkDate.setDate(checkDate.getDate() - 1);
           continue;
         }
@@ -1895,7 +1930,7 @@
       return (item.completed || []).slice().sort();
     }
 
-    function calcBestStreak(completedDates, activeDays) {
+    function calcBestStreak(completedDates, activeDays, settings) {
       if (!completedDates || completedDates.length === 0) return 0;
       const sorted = [...completedDates].sort();
       const hasActiveDays = activeDays && activeDays.length > 0 && activeDays.length < 7;
@@ -1909,12 +1944,15 @@
           if (diff === 1) { current++; if (current > best) best = current; }
           // diff === 0 means duplicate, ignore
         } else if (hasActiveDays) {
-          // Check if all days between prev and curr are inactive
+          // Check if all calendar days between prev and curr are logically inactive
+          // (use effectiveDayOfWeek to account for resetHour > 13 day offset)
           let allInactive = true;
           const check = new Date(prev);
           check.setDate(check.getDate() + 1);
           while (check < curr) {
-            if (activeDays.includes(check.getDay())) { allInactive = false; break; }
+            if (activeDays.includes(effectiveDayOfWeek(toLocalDateStr(check), settings || {}))) {
+              allInactive = false; break;
+            }
             check.setDate(check.getDate() + 1);
           }
           if (allInactive) {
@@ -1940,10 +1978,11 @@
       let totalDays;
       if (hasActiveDays) {
         // Count only active days between first and today
+        // Use effectiveDayOfWeek to account for resetHour > 13 day offset
         totalDays = 0;
         const cursor = new Date(first);
         while (cursor <= today) {
-          if (activeDays.includes(cursor.getDay())) totalDays++;
+          if (activeDays.includes(effectiveDayOfWeek(toLocalDateStr(cursor), settings))) totalDays++;
           cursor.setDate(cursor.getDate() + 1);
         }
         totalDays = Math.max(1, totalDays);
@@ -1964,7 +2003,7 @@
       // Go back ~4 months (18 weeks)
       const numWeeks = 18;
       const endDate = new Date(today);
-      // Move endDate to the upcoming Saturday (end of current week)
+      // Move endDate to the upcoming Saturday (end of current week) using effective date
       const endDow = endDate.getDay(); // 0=Sun
       endDate.setDate(endDate.getDate() + (6 - endDow));
       const startDate = new Date(endDate);
@@ -1976,12 +2015,15 @@
       for (let w = 0; w < numWeeks; w++) {
         const week = [];
         for (let d = 0; d < 7; d++) {
-          const ds = toLocalDateStr(cursor);
+          const calDs = toLocalDateStr(cursor); // physical calendar date of this cell
+          // For resetHour > 13, each physical cell represents the NEXT logical day.
+          // The completion for that logical day is stored under the PREVIOUS calendar date.
+          const effDs = calendarDateToEffectiveDate(calDs, settings);
           week.push({
-            date: ds,
-            filled: datesSet.has(ds),
-            future: ds > todayStr,
-            today: ds === todayStr
+            date: calDs,         // used for onclick (will be converted back in toggleCalendarDay)
+            filled: datesSet.has(effDs),
+            future: effDs > todayStr,
+            today: effDs === todayStr
           });
           cursor.setDate(cursor.getDate() + 1);
         }
@@ -2041,8 +2083,12 @@
     // ── Toggle a past day completion from the calendar heatmap ──
     // context: 'habit' | 'group' | 'child'
     // extra: groupId when context === 'child'
-    function toggleCalendarDay(id, dateStr, context, extra) {
+    // dateStr is the PHYSICAL calendar date of the clicked cell.
+    // We convert it to the stored effective date before touching completedDates.
+    function toggleCalendarDay(id, calDateStr, context, extra) {
       const data = load();
+      // Convert physical calendar cell date → stored effective date
+      const dateStr = calendarDateToEffectiveDate(calDateStr, data.settings);
 
       if (context === 'habit') {
         const item = data.items.find(i => i.id === id);
@@ -2122,7 +2168,7 @@
       const currentStreak = item.type === 'group'
         ? calcGroupStreak(item, settings)
         : calcStreak(item.completed, settings, item.activeDays);
-      const bestStreak = calcBestStreak(completedDates, item.activeDays);
+      const bestStreak = calcBestStreak(completedDates, item.activeDays, settings);
       const totalDays = completedDates.length;
       const rate = calcCompletionRate(completedDates, settings, item.activeDays);
 
@@ -2163,7 +2209,7 @@
         bodyHtml += `<div class="detail-children"><h3>Items</h3>`;
         item.children.forEach(child => {
           const cStreak = calcStreak(child.completed, settings, item.activeDays);
-          const cBest = calcBestStreak(child.completed || [], item.activeDays);
+          const cBest = calcBestStreak(child.completed || [], item.activeDays, settings);
           const cTotal = (child.completed || []).length;
           bodyHtml += `<div class="detail-child-row">
             <div class="detail-child-name">${escapeHtml(child.name)}</div>
@@ -2194,7 +2240,7 @@
       const settings = data.settings;
       const completedDates = (child.completed || []).slice().sort();
       const currentStreak = calcStreak(child.completed, settings, group.activeDays);
-      const bestStreak = calcBestStreak(completedDates, group.activeDays);
+      const bestStreak = calcBestStreak(completedDates, group.activeDays, settings);
       const totalDays = completedDates.length;
       const rate = calcCompletionRate(completedDates, settings, group.activeDays);
 
