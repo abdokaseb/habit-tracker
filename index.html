@@ -1009,6 +1009,20 @@
       background: transparent;
     }
 
+    .calendar-cell.interactive {
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.12s;
+    }
+
+    .calendar-cell.interactive:hover {
+      opacity: 0.72;
+      transform: scale(1.25);
+    }
+
+    .calendar-cell.interactive:active {
+      transform: scale(0.88);
+    }
+
     /* ── Children stats in detail ── */
     .detail-children {
       margin-top: 24px;
@@ -1939,7 +1953,9 @@
       return Math.round((completedDates.length / totalDays) * 100);
     }
 
-    function buildHeatmapHtml(completedDates, settings) {
+    // context: 'habit' | 'group' | 'child'
+    // extra: for 'child' pass groupId; otherwise unused
+    function buildHeatmapHtml(completedDates, settings, itemId, context, extra) {
       const todayStr = getEffectiveDate(settings);
       const today = new Date(todayStr + 'T12:00:00');
       const datesSet = new Set(completedDates);
@@ -2001,7 +2017,13 @@
           if (day.future) {
             col += '<div class="calendar-cell empty"></div>';
           } else {
-            col += `<div class="calendar-cell ${day.filled ? 'filled' : ''} ${day.today ? 'today' : ''}"></div>`;
+            // Build onclick for interactive past/today cells
+            let onclick = '';
+            if (itemId && context) {
+              const extraArg = extra ? `,'${extra}'` : '';
+              onclick = ` onclick="toggleCalendarDay('${itemId}','${day.date}','${context}'${extraArg})"`;
+            }
+            col += `<div class="calendar-cell ${day.filled ? 'filled' : ''} ${day.today ? 'today' : ''} ${itemId ? 'interactive' : ''}" data-date="${day.date}"${onclick}></div>`;
           }
         });
         gridHtml += `<div class="calendar-col">${col}</div>`;
@@ -2014,6 +2036,80 @@
           <div class="calendar-grid">${gridHtml}</div>
         </div>
       </div>`;
+    }
+
+    // ── Toggle a past day completion from the calendar heatmap ──
+    // context: 'habit' | 'group' | 'child'
+    // extra: groupId when context === 'child'
+    function toggleCalendarDay(id, dateStr, context, extra) {
+      const data = load();
+
+      if (context === 'habit') {
+        const item = data.items.find(i => i.id === id);
+        if (!item) return;
+        if (!item.completed) item.completed = [];
+        const idx = item.completed.indexOf(dateStr);
+        if (idx > -1) item.completed.splice(idx, 1);
+        else item.completed.push(dateStr);
+        save(data);
+        showDetail(id);
+
+      } else if (context === 'group') {
+        const item = data.items.find(i => i.id === id);
+        if (!item || item.type !== 'group') return;
+        const wasDone = isGroupDoneOnDate(item, dateStr);
+        if (wasDone) {
+          // Uncomplete: remove from group and all children
+          if (item.completed) {
+            const gi = item.completed.indexOf(dateStr);
+            if (gi > -1) item.completed.splice(gi, 1);
+          }
+          item.children.forEach(c => {
+            if (c.completed) {
+              const ci = c.completed.indexOf(dateStr);
+              if (ci > -1) c.completed.splice(ci, 1);
+            }
+          });
+        } else {
+          // Complete: add to group and all children
+          if (!item.completed) item.completed = [];
+          if (!item.completed.includes(dateStr)) item.completed.push(dateStr);
+          item.children.forEach(c => {
+            if (!c.completed) c.completed = [];
+            if (!c.completed.includes(dateStr)) c.completed.push(dateStr);
+          });
+        }
+        save(data);
+        showDetail(id);
+
+      } else if (context === 'child') {
+        // id = childId, extra = groupId
+        const groupId = extra;
+        const item = data.items.find(i => i.id === groupId);
+        if (!item || item.type !== 'group') return;
+        const child = item.children.find(c => c.id === id);
+        if (!child) return;
+        if (!child.completed) child.completed = [];
+        const idx = child.completed.indexOf(dateStr);
+        if (idx > -1) {
+          child.completed.splice(idx, 1);
+          // Remove group completion too (since not all children done anymore)
+          if (item.completed) {
+            const gi = item.completed.indexOf(dateStr);
+            if (gi > -1) item.completed.splice(gi, 1);
+          }
+        } else {
+          child.completed.push(dateStr);
+          // Auto-complete group if all children now done on this date
+          const allDone = item.children.every(c => c.completed && c.completed.includes(dateStr));
+          if (allDone) {
+            if (!item.completed) item.completed = [];
+            if (!item.completed.includes(dateStr)) item.completed.push(dateStr);
+          }
+        }
+        save(data);
+        showChildDetail(groupId, id);
+      }
     }
 
     function showDetail(id) {
@@ -2056,9 +2152,10 @@
       </div>`;
 
       // Calendar
+      const calCtx = item.type === 'group' ? 'group' : 'habit';
       bodyHtml += `<div class="calendar-section">
-        <h3>Calendar</h3>
-        ${buildHeatmapHtml(completedDates, settings)}
+        <h3>Calendar <span style="font-size:0.7rem;color:var(--text-dim);font-weight:400;text-transform:none;letter-spacing:0">— tap a day to toggle</span></h3>
+        ${buildHeatmapHtml(completedDates, settings, item.id, calCtx)}
       </div>`;
 
       // Group children breakdown
@@ -2128,8 +2225,8 @@
       </div>`;
 
       bodyHtml += `<div class="calendar-section">
-        <h3>Calendar</h3>
-        ${buildHeatmapHtml(completedDates, settings)}
+        <h3>Calendar <span style="font-size:0.7rem;color:var(--text-dim);font-weight:400;text-transform:none;letter-spacing:0">— tap a day to toggle</span></h3>
+        ${buildHeatmapHtml(completedDates, settings, child.id, 'child', group.id)}
       </div>`;
 
       document.getElementById('detailBody').innerHTML = bodyHtml;
